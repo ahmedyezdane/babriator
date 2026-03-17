@@ -9,21 +9,21 @@ import (
 )
 
 func main() {
-	fileName := "sample.txt"
 
-	fileLines, err := readFileContent(fileName)
-	if err != nil {
-		LogError(fmt.Sprintf("Error while getting file lines: %v", err))
-		return
-	}
+	clearScreen()
+
+	pathToFile := getInputFilePath()
+	fileName := GetFileName(pathToFile)
+
+	fileLines := TryReadFileContent(pathToFile)
 
 	linesBuffer := NewLinesBuffer(fileLines)
 
 	oldState, _ := term.MakeRaw(int(os.Stdin.Fd()))
 	defer term.Restore(int(os.Stdin.Fd()), oldState)
 
-	enterAlternateScreen()
-	defer exitAlternateScreen()
+	EnterAlternateScreen()
+	defer ExitAlternateScreen()
 
 	keyCh := make(chan []byte)
 
@@ -42,11 +42,11 @@ func main() {
 		}
 	}()
 
-	refreshInterval := 3000 * time.Millisecond
+	refreshInterval := 300 * time.Millisecond
 	ticker := time.NewTicker(refreshInterval)
 	defer ticker.Stop()
 
-	initialRenderError := ClearAndRenderScreen(linesBuffer,fileName)
+	initialRenderError := ClearAndRenderScreen(linesBuffer, fileName)
 	if initialRenderError != nil {
 		LogError(fmt.Sprintf("ERROR: %v", initialRenderError))
 		return
@@ -59,15 +59,17 @@ func main() {
 				return
 			}
 			key := DetermineKey(keyBytes)
-			LogError(fmt.Sprintf("keyBytes : %v", keyBytes))
-			LogError(fmt.Sprintf("DetermineKey : %v", key))
-			LogError(fmt.Sprintf("DetermineKey : %v", key))
 
 			switch key {
+
 			case "KeyCtrlC":
 				return
 			case "KeyCtrlS":
-				//saveFile(fileLines)
+				err := SaveFile(fileName, linesBuffer.Lines)
+				if err != nil {
+					LogError(fmt.Sprintf("Error while saving file: %v", err))
+				}
+				return
 
 			case "KeyBackspace":
 				linesBuffer.DeleteCharacterBackward()
@@ -100,7 +102,7 @@ func main() {
 			linesBuffer.SetCursorVisibility(true)
 			ticker.Reset(refreshInterval) // Reset the ticker so cursor doesn't flicker right after a keypress
 
-			err := ClearAndRenderScreen(linesBuffer,fileName)
+			err := ClearAndRenderScreen(linesBuffer, fileName)
 			if err != nil {
 				LogError(fmt.Sprintf("ERROR: %v", err))
 				return
@@ -109,7 +111,7 @@ func main() {
 		case <-ticker.C:
 			linesBuffer.ToggleCursorVisibilityVisibility()
 
-			err := ClearAndRenderScreen(linesBuffer,fileName)
+			err := ClearAndRenderScreen(linesBuffer, fileName)
 			if err != nil {
 				LogError(fmt.Sprintf("ERROR: %v", err))
 				return
@@ -118,15 +120,20 @@ func main() {
 	}
 }
 
-//// TODOs - Version 0.1.0
-// save file
-// get file from input and open file
-// bug: a => [216 180]
-// bug: DeleteCharacterBackward at line 0 make the code panic
+func getInputFilePath() string {
+	var pathToFile string
 
-//// DONE
-// Backspace
-// Delete
-// Arrow Keys
-// Enter
-// KeyHome, KeyEnd
+	if len(os.Args) < 2 {
+		fmt.Print("Enter file path: ")
+		fmt.Scanln(&pathToFile)
+	} else {
+		pathToFile = os.Args[1]
+	}
+
+	if len(pathToFile) == 0 || pathToFile == "" {
+		LogError("No file path provided")
+		getInputFilePath()
+	}
+
+	return pathToFile
+}

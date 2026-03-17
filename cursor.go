@@ -18,7 +18,7 @@ func NewCursor() Cursor {
 	}
 }
 
-func (cursor *Cursor) getSymbolAccourdingVisibility() string {
+func (cursor *Cursor) GetSymbolAccourdingVisibility() string {
 	if cursor.IsVisible {
 		return fmt.Sprintf("\033[31m%s\033[0m", cursor.CurrentSymbol)
 	} else {

@@ -12,9 +12,8 @@ func ClearAndRenderScreen(linesBuffer LinesBuffer, fileName string) error {
 }
 
 func clearScreen() {
-    fmt.Print("\033[H\033[3J\033[2J")
+	fmt.Print("\033[H\033[3J\033[2J")
 }
-
 
 func render(textLines []string, cursor Cursor, fileName string) error {
 
@@ -23,7 +22,7 @@ func render(textLines []string, cursor Cursor, fileName string) error {
 		return err
 	}
 
-	fmt.Printf("\n[%v]\n\n",strings.ToUpper(fileName))
+	fmt.Printf("\n[%v]\n\n", strings.ToUpper(fileName))
 
 	for i, line := range printableLines {
 		fmt.Printf("\033[32m%-*d\033[0m \033[33m|\033[0m %v\n", len(fmt.Sprintf("%d", len(printableLines))), i+1, line)
@@ -37,9 +36,8 @@ func appendCursorToTextLines(textLines []string, cursor Cursor) ([]string, error
 
 	output := make([]string, textLinesCount)
 
-	// TODO<Ahmad> test this case
 	if textLinesCount == 0 {
-		output = append(output, cursor.getSymbolAccourdingVisibility())
+		output = append(output, cursor.GetSymbolAccourdingVisibility())
 		return output, nil
 	}
 
@@ -50,15 +48,15 @@ func appendCursorToTextLines(textLines []string, cursor Cursor) ([]string, error
 	substring1 := textLine[:cursor.CharacterIndex]
 	substring2 := textLine[cursor.CharacterIndex:]
 
-	output[cursor.LineIndex] = substring1 + cursor.getSymbolAccourdingVisibility() + substring2
+	output[cursor.LineIndex] = substring1 + cursor.GetSymbolAccourdingVisibility() + substring2
 
 	return output, nil
 }
 
-func enterAlternateScreen() {
-    fmt.Print("\033[?1049h")
+func EnterAlternateScreen() {
+	fmt.Print("\033[?1049h")
 }
 
-func exitAlternateScreen() {
-    fmt.Print("\033[?1049l")
+func ExitAlternateScreen() {
+	fmt.Print("\033[?1049l")
 }

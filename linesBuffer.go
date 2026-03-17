@@ -84,8 +84,11 @@ func (linesBuffer *LinesBuffer) InsertPrintableCharacter(content string) {
 func (linesBuffer *LinesBuffer) DeleteCharacterBackward() {
 
 	if linesBuffer.Cursor.CharacterIndex == 0 {
-		// add current line to the end of previous line
+		if linesBuffer.Cursor.LineIndex == 0 {
+			return
+		}
 
+		// add current line to the end of previous line
 		precedingLines := ((*linesBuffer).Lines)[:(linesBuffer.Cursor.LineIndex - 1)]
 		previousLine := ((*linesBuffer).Lines)[linesBuffer.Cursor.LineIndex-1]
 
@@ -138,7 +141,6 @@ func (linesBuffer *LinesBuffer) DeleteCharacterForward() {
 
 		(*linesBuffer).Lines = linesCopy
 
-		//linesBuffer.Cursor.SetPosition((linesBuffer.Cursor.LineIndex - 1), len(previousLine))
 	} else {
 		substring1, substring2 := splitLine(currentLine, linesBuffer.Cursor.CharacterIndex)
 
