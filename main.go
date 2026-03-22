@@ -3,10 +3,11 @@ package main
 import (
 	"fmt"
 	"os"
-	"time"
 
 	"golang.org/x/term"
 )
+
+const VERSION string = "1.1.0"
 
 func main() {
 
@@ -27,7 +28,6 @@ func main() {
 
 	keyCh := make(chan []byte)
 
-	// Goroutine that blocks on stdin and sends each byte to the channel
 	go func() {
 		buf := make([]byte, 8)
 		for {
@@ -36,87 +36,57 @@ func main() {
 				close(keyCh)
 				return
 			}
-			tmp := make([]byte, n) // in order to not get overwritten data
+			tmp := make([]byte, n)
 			copy(tmp, buf[:n])
 			keyCh <- tmp
 		}
 	}()
 
-	refreshInterval := 300 * time.Millisecond
-	ticker := time.NewTicker(refreshInterval)
-	defer ticker.Stop()
+	ClearAndRenderScreen(linesBuffer, fileName)
 
-	initialRenderError := ClearAndRenderScreen(linesBuffer, fileName)
-	if initialRenderError != nil {
-		LogError(fmt.Sprintf("ERROR: %v", initialRenderError))
-		return
-	}
+	for keyBytes := range keyCh {
+		key := DetermineKey(keyBytes)
 
-	for {
-		select {
-		case keyBytes, ok := <-keyCh:
-			if !ok {
-				return
-			}
-			key := DetermineKey(keyBytes)
+		switch key {
 
-			switch key {
-
-			case "KeyCtrlC":
-				return
-			case "KeyCtrlS":
-				err := SaveFile(fileName, linesBuffer.Lines)
-				if err != nil {
-					LogError(fmt.Sprintf("Error while saving file: %v", err))
-				}
-				return
-
-			case "KeyBackspace":
-				linesBuffer.DeleteCharacterBackward()
-			case "KeyDelete":
-				linesBuffer.DeleteCharacterForward()
-
-			case "KeyEnter":
-				linesBuffer.BreakLine()
-
-			case "KeyUp":
-				linesBuffer.MoveCursorUp()
-			case "KeyDown":
-				linesBuffer.MoveCursorDown()
-			case "KeyRight":
-				linesBuffer.MoveCursorRight()
-			case "KeyLeft":
-				linesBuffer.MoveCursorLeft()
-
-			case "KeyEnd":
-				linesBuffer.MoveCursorToEndOfLine()
-			case "KeyHome":
-				linesBuffer.MoveCursorToBeginingOfLine()
-
-			default:
-				if len(key) == 1 {
-					linesBuffer.InsertPrintableCharacter(key)
-				}
-			}
-
-			linesBuffer.SetCursorVisibility(true)
-			ticker.Reset(refreshInterval) // Reset the ticker so cursor doesn't flicker right after a keypress
-
-			err := ClearAndRenderScreen(linesBuffer, fileName)
+		case "KeyCtrlC":
+			return
+		case "KeyCtrlS":
+			err := SaveFile(fileName, linesBuffer.Lines)
 			if err != nil {
-				LogError(fmt.Sprintf("ERROR: %v", err))
-				return
+				LogError(fmt.Sprintf("Error while saving file: %v", err))
 			}
+			return
 
-		case <-ticker.C:
-			linesBuffer.ToggleCursorVisibilityVisibility()
+		case "KeyBackspace":
+			linesBuffer.DeleteCharacterBackward()
+		case "KeyDelete":
+			linesBuffer.DeleteCharacterForward()
 
-			err := ClearAndRenderScreen(linesBuffer, fileName)
-			if err != nil {
-				LogError(fmt.Sprintf("ERROR: %v", err))
-				return
+		case "KeyEnter":
+			linesBuffer.BreakLine()
+
+		case "KeyUp":
+			linesBuffer.MoveCursorUp()
+		case "KeyDown":
+			linesBuffer.MoveCursorDown()
+		case "KeyRight":
+			linesBuffer.MoveCursorRight()
+		case "KeyLeft":
+			linesBuffer.MoveCursorLeft()
+
+		case "KeyEnd":
+			linesBuffer.MoveCursorToEndOfLine()
+		case "KeyHome":
+			linesBuffer.MoveCursorToBeginingOfLine()
+
+		default:
+			if len(key) == 1 {
+				linesBuffer.InsertPrintableCharacter(key)
 			}
 		}
+
+		ClearAndRenderScreen(linesBuffer, fileName)
 	}
 }
 

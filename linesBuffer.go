@@ -60,13 +60,6 @@ func (b *LinesBuffer) MoveCursorToBeginingOfLine() {
 	b.Cursor.CharacterIndex = 0
 }
 
-func (b *LinesBuffer) SetCursorVisibility(isVisibile bool) {
-	b.Cursor.IsVisible = isVisibile
-}
-func (b *LinesBuffer) ToggleCursorVisibilityVisibility() {
-	b.Cursor.IsVisible = !b.Cursor.IsVisible
-}
-
 func (linesBuffer *LinesBuffer) InsertPrintableCharacter(content string) {
 	if len(content) == 0 || content == "" {
 		return
