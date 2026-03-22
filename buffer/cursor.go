@@ -1,4 +1,4 @@
-package main
+package buffer
 
 type Cursor struct {
 	LineIndex      int

@@ -1,4 +1,4 @@
-package main
+package buffer
 
 type LinesBuffer struct {
 	Lines  []string

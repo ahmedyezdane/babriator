@@ -5,26 +5,31 @@ import (
 	"os"
 
 	"golang.org/x/term"
+
+	"babritor/buffer"
+	"babritor/helpers"
+	"babritor/logging"
+	"babritor/screen"
 )
 
 const VERSION string = "1.1.0"
 
 func main() {
 
-	clearScreen()
+	screen.ClearScreen()
 
 	pathToFile := getInputFilePath()
-	fileName := GetFileName(pathToFile)
+	fileName := helpers.GetFileName(pathToFile)
 
-	fileLines := TryReadFileContent(pathToFile)
+	fileLines := helpers.TryReadFileContent(pathToFile)
 
-	linesBuffer := NewLinesBuffer(fileLines)
+	linesBuffer := buffer.NewLinesBuffer(fileLines)
 
 	oldState, _ := term.MakeRaw(int(os.Stdin.Fd()))
 	defer term.Restore(int(os.Stdin.Fd()), oldState)
 
-	EnterAlternateScreen()
-	defer ExitAlternateScreen()
+	screen.EnterAlternateScreen()
+	defer screen.ExitAlternateScreen()
 
 	keyCh := make(chan []byte)
 
@@ -42,19 +47,19 @@ func main() {
 		}
 	}()
 
-	ClearAndRenderScreen(linesBuffer, fileName)
+	screen.ClearAndRenderScreen(linesBuffer, fileName)
 
 	for keyBytes := range keyCh {
-		key := DetermineKey(keyBytes)
+		key := helpers.DetermineKey(keyBytes)
 
 		switch key {
 
 		case "KeyCtrlC":
 			return
 		case "KeyCtrlS":
-			err := SaveFile(fileName, linesBuffer.Lines)
+			err := helpers.SaveFile(fileName, linesBuffer.Lines)
 			if err != nil {
-				LogError(fmt.Sprintf("Error while saving file: %v", err))
+				logging.LogError(fmt.Sprintf("Error while saving file: %v", err))
 			}
 			return
 
@@ -86,7 +91,7 @@ func main() {
 			}
 		}
 
-		ClearAndRenderScreen(linesBuffer, fileName)
+		screen.ClearAndRenderScreen(linesBuffer, fileName)
 	}
 }
 
@@ -101,7 +106,7 @@ func getInputFilePath() string {
 	}
 
 	if len(pathToFile) == 0 || pathToFile == "" {
-		LogError("No file path provided")
+		logging.LogError("No file path provided")
 		getInputFilePath()
 	}
 

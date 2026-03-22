@@ -1,14 +1,15 @@
-package main
+package screen
 
 import (
 	"fmt"
 	"strings"
+	"babritor/buffer"
 )
 
-func ClearAndRenderScreen(linesBuffer LinesBuffer, fileName string) {
-	clearScreen()
+func ClearAndRenderScreen(linesBuffer buffer.LinesBuffer, fileName string) {
+	ClearScreen()
 
-	marginLinesCount, marginCharactersCount := renderAndCalculateMargin(linesBuffer.Lines, linesBuffer.Cursor, fileName)
+	marginLinesCount, marginCharactersCount := renderAndCalculateMargin(linesBuffer.Lines, fileName)
 
 	moveCursorTo(
 		linesBuffer.Cursor.LineIndex+marginLinesCount,
@@ -16,11 +17,11 @@ func ClearAndRenderScreen(linesBuffer LinesBuffer, fileName string) {
 
 }
 
-func clearScreen() {
+func ClearScreen() {
 	fmt.Print("\033[H\033[3J\033[2J")
 }
 
-func renderAndCalculateMargin(textLines []string, cursor Cursor, fileName string) (marginLinesCount, marginCharactersCount int) {
+func renderAndCalculateMargin(textLines []string, fileName string) (marginLinesCount, marginCharactersCount int) {
 
 	fmt.Printf("\n[%v]\n\n", strings.ToUpper(fileName))
 	marginLinesCount = 4
