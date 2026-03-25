@@ -15,6 +15,11 @@ import (
 const VERSION string = "1.1.0"
 
 func main() {
+	
+	if err := logging.Initialize(); err != nil {
+		panic(err)
+	}
+	defer logging.Close()
 
 	screen.ClearScreen()
 
@@ -47,7 +52,8 @@ func main() {
 		}
 	}()
 
-	screen.ClearAndRenderScreen(linesBuffer, fileName)
+	screenState := screen.NewScreenState(fileName)
+	screen.InitialScreenRender(linesBuffer, screenState)
 
 	for keyBytes := range keyCh {
 		key := helpers.DetermineKey(keyBytes)
@@ -91,7 +97,7 @@ func main() {
 			}
 		}
 
-		screen.ClearAndRenderScreen(linesBuffer, fileName)
+		screenState.ApplyLineBufferEvents(&linesBuffer)
 	}
 }
 

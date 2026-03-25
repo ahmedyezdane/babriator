@@ -1,63 +1,140 @@
 package screen
 
 import (
-	"fmt"
-	"strings"
 	"babritor/buffer"
+	"babritor/buffer/events"
+	"fmt"
+	"os"
+	"strings"
 )
 
-func ClearAndRenderScreen(linesBuffer buffer.LinesBuffer, fileName string) {
+// \033[32m - Sets text color to green
+// \033[33m - Sets text color to yellow
+// \033[0m  - Resets formatting to default
+// %-*d     - Left-aligned integer with dynamic width (the * means width is passed as an argument)
+const lineNumberTemplate string = "\033[32m%-*d\033[0m \033[33m|\033[0m %v\n"
+
+const (
+	headerLinesCount                int8 = 2
+	minLinePadding                  int8 = 3
+	graphicalCharactersPerLineCount int8 = 4
+)
+
+type ScreenState struct {
+	headerLinesCount       int8
+	paddingCharactersCount int8
+
+	FileName string
+}
+
+func NewScreenState(fileName string) ScreenState {
+	return ScreenState{
+		headerLinesCount:       headerLinesCount,
+		paddingCharactersCount: minLinePadding,
+		FileName:               fileName,
+	}
+}
+
+func InitialScreenRender(linesBuffer buffer.LinesBuffer, screenState ScreenState) {
+
 	ClearScreen()
 
-	marginLinesCount, marginCharactersCount := renderAndCalculateMargin(linesBuffer.Lines, fileName)
+	fmt.Printf("[%v]\n\n", strings.ToUpper(screenState.FileName))
 
-	moveCursorTo(
-		linesBuffer.Cursor.LineIndex+marginLinesCount,
-		linesBuffer.Cursor.CharacterIndex+marginCharactersCount)
+	for i, t := range linesBuffer.Lines {
+		fmt.Print(createLineForPrint(screenState.paddingCharactersCount, i+1, t))
+	}
 
+	RelocateCursor(linesBuffer, screenState)
 }
 
 func ClearScreen() {
 	fmt.Print("\033[H\033[3J\033[2J")
 }
 
-func renderAndCalculateMargin(textLines []string, fileName string) (marginLinesCount, marginCharactersCount int) {
+func createLineForPrint(padding int8, lineNumber int, content string) string {
+	return fmt.Sprintf(lineNumberTemplate, padding, lineNumber, content)
+}
 
-	fmt.Printf("\n[%v]\n\n", strings.ToUpper(fileName))
-	marginLinesCount = 4
+func RelocateCursor(linesBuffer buffer.LinesBuffer, screenState ScreenState) {
+	lineIndex, characterIndex := calculateTerminalCursorPostion(screenState, linesBuffer)
 
-	marginAccourdingTotalLinesCount := len(fmt.Sprintf("%d", len(textLines)))
+	moveCursorTo(lineIndex, characterIndex)
+}
 
-	for i, line := range textLines {
-		fmt.Printf("\033[32m%-*d\033[0m \033[33m|\033[0m %v\n", marginAccourdingTotalLinesCount, i+1, line)
+func EnterAlternateScreen() {
+	fmt.Print(ansiEnterAlternateScreen)
+}
+
+func ExitAlternateScreen() {
+	fmt.Print(ansiExitAlternateScreen)
+}
+
+func (screenState *ScreenState) ApplyLineBufferEvents(linesBuffer *buffer.LinesBuffer) {
+	fmt.Fprint(os.Stdout, ansiHideCursor)
+
+	for _, event := range linesBuffer.Events {
+
+		switch ev := event.(type) {
+
+		case events.LineCreatedEvent:
+			screenState.rerenderLinesTillTheEnd(ev.LineIndex, *linesBuffer)
+
+		case events.LineUpdatedEvent:
+			screenState.rerenderLine(ev.LineIndex, linesBuffer.Lines[ev.LineIndex])
+
+		case events.LineRemovedEvent:
+			screenState.rerenderLinesTillTheEnd(ev.LineIndex, *linesBuffer)
+			screenState.clearLastLine(len(linesBuffer.Lines))
+		}
 	}
 
-	marginCharactersCount = marginAccourdingTotalLinesCount + 4
+	RelocateCursor(*linesBuffer, *screenState)
+
+	linesBuffer.ClearChangeEvents()
+
+	fmt.Fprint(os.Stdout, ansiShowCursor)
+}
+
+func moveCursorTo(lineIndex, characterIndex int) {
+	fmt.Printf(ansiMoveCursor, lineIndex, characterIndex)
+}
+
+func calculateTerminalCursorPostion(screenState ScreenState, linesBuffer buffer.LinesBuffer) (lineNumber, characterIndex int) {
+
+	lineNumber = int(screenState.headerLinesCount) +
+		linesBuffer.Cursor.LineIndex +
+		1 //terminal line number start at 1 rather than 0
+
+	characterIndex = int(screenState.paddingCharactersCount) +
+		int(graphicalCharactersPerLineCount) +
+		linesBuffer.Cursor.CharacterIndex
 
 	return
 }
 
-func EnterAlternateScreen() {
-	fmt.Print("\033[?1049h")
+func calculateTerminalCursorLineNumber(screenState ScreenState, cursorLineIndex int) int {
+	return int(screenState.headerLinesCount) +
+		cursorLineIndex +
+		1
 }
 
-func ExitAlternateScreen() {
-	fmt.Print("\033[?1049l")
+func (screenState *ScreenState) rerenderLinesTillTheEnd(startIndex int, linesBuffer buffer.LinesBuffer) {
+	for i := startIndex; i < len(linesBuffer.Lines); i++ {
+		screenState.rerenderLine(i, linesBuffer.Lines[i])
+	}
 }
 
-const (
-	// Move cursor to position (row, col) - both 1-based
-	ansiMoveCursor = "\033[%d;%dH"
+func (screenState *ScreenState) rerenderLine(lineIndex int, text string) {
+	tln := calculateTerminalCursorLineNumber(*screenState, lineIndex)
+	moveCursorTo(tln, 0)
+	fmt.Fprint(os.Stdout, ansiClearLine)
+	lineContent := createLineForPrint(screenState.paddingCharactersCount, lineIndex+1, text)
+	fmt.Fprint(os.Stdout, lineContent)
+}
 
-	// Cursor style (DECSCUSR)
-	ansiCursorBlinkingBlock     = "\033[1 q"
-	ansiCursorSteadyBlock       = "\033[2 q"
-	ansiCursorBlinkingUnderline = "\033[3 q"
-	ansiCursorSteadyUnderline   = "\033[4 q"
-	ansiCursorBlinkingBar       = "\033[5 q" // classic insert-mode cursor
-	ansiCursorSteadyBar         = "\033[6 q"
-)
-
-func moveCursorTo(row, col int) {
-	fmt.Printf(ansiMoveCursor, row, col)
+func (screenState *ScreenState) clearLastLine(lastLineIndex int) {
+	tln := calculateTerminalCursorLineNumber(*screenState, lastLineIndex)
+	moveCursorTo(tln, 0)
+	fmt.Fprint(os.Stdout, ansiDeleteLine)
 }

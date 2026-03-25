@@ -2,3 +2,4 @@ vendor/
 .vscode/
 babritor.exe
 sample.txt
+.idea/
