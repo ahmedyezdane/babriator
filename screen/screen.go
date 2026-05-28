@@ -1,8 +1,8 @@
 package screen
 
 import (
-	"babritor/buffer"
-	"babritor/buffer/events"
+	"babriator/buffer"
+	"babriator/buffer/events"
 	"fmt"
 	"os"
 	"strings"

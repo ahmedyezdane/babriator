@@ -1,6 +1,6 @@
 package buffer
 
-import "babritor/buffer/events"
+import "babriator/buffer/events"
 
 type LinesBuffer struct {
 	Lines  []string

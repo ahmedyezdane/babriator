@@ -6,24 +6,40 @@ import (
 
 	"golang.org/x/term"
 
-	"babritor/buffer"
-	"babritor/helpers"
-	"babritor/logging"
-	"babritor/screen"
+	"babriator/buffer"
+	"babriator/helpers"
+	"babriator/logging"
+	"babriator/screen"
+
+	"github.com/joho/godotenv"
 )
 
 const VERSION string = "1.1.0"
 
 func main() {
-	
-	if err := logging.Initialize(); err != nil {
-		panic(err)
-	}
-	defer logging.Close()
+
+	godotenv.Load()
 
 	screen.ClearScreen()
 
-	pathToFile := getInputFilePath()
+	var pathToFile string
+
+	environment := os.Getenv("BABRIATOR_ENV")
+	if environment == "DEV" {
+
+		if err := logging.Initialize(); err != nil {
+			panic(err)
+		}
+		defer logging.Close()
+
+		logging.LogInfo("Running in development environment")
+
+		pathToFile = "sample.txt"
+
+	} else {
+		pathToFile = getInputFilePath()
+	}
+
 	fileName := helpers.GetFileName(pathToFile)
 
 	fileLines := helpers.TryReadFileContent(pathToFile)

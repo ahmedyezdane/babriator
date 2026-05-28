@@ -1,6 +1,6 @@
 package buffer
 
-import "babritor/helpers"
+import "babriator/helpers"
 
 func (buffer *LinesBuffer) InsertPrintableCharacter(content string) {
 	if len(content) == 0 || content == "" {
